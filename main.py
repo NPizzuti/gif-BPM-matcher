@@ -7,8 +7,17 @@ from obswebsocket import obsws, requests, exceptions
 # Connect to OBS WebSocket
 host = "192.168.1.88"
 port = 4455  # Change if necessary
-password = "<put your OBS web socket password here>"  # Set in OBS WebSocket settings
+password = "<your OBS web socket password here>"  # Set in OBS WebSocket settings
 
+# Audio stream configuration
+CHUNK = 4096  # Number of audio frames per buffer
+FORMAT = pyaudio.paInt16  # 16-bit audio format
+CHANNELS = 1  # Stereo audio
+RATE = 44100  # Standard sample rate
+
+# GIF configuration
+baseGIFBPM = 200
+obsSourceName = "MyGIFSource"
 
 ws = obsws(host, port, password)
 print('Created WS')
@@ -21,18 +30,6 @@ current_scene = ws.call(requests.GetCurrentProgramScene())
 for s in scenes.getScenes():
     print(s)
 print('Current scene is', current_scene)
-
-
-
-# Name of the media source in OBS
-source_name = "MyGIFSource"
-
-
-# Audio stream configuration
-CHUNK = 4096  # Number of audio frames per buffer
-FORMAT = pyaudio.paInt16  # 16-bit audio format
-CHANNELS = 1  # Stereo audio
-RATE = 44100  # Standard sample rate
 
 
 # Initialize PyAudio
@@ -50,7 +47,7 @@ def get_bpm(audio_buffer, sr=RATE):
 
 print("Listening for BPM...")
 
-current_bpm = 200 # Really doesn't matter what number you put here
+current_bpm = baseGIFBPM # Really doesn't matter what number you put here
 
 try:
     while True:
@@ -59,7 +56,7 @@ try:
         if abs(current_bpm - bpm) > 5:
             print(f"Estimated BPM: {bpm}")
             # GIF BPM is estimated at 200, OBS expects a % relative to 100, hence we divide by 2.00
-            result = ws.call(requests.SetInputSettings(inputName=source_name, inputSettings={'speed_percent': int(bpm/2.00+.5)}))
+            result = ws.call(requests.SetInputSettings(inputName=obsSourceName, inputSettings={'speed_percent': int(bpm/baseGIFBPM*100.0+.5)}))
             current_bpm = bpm
             print(result)
 

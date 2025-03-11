@@ -2,12 +2,12 @@ import pyaudio
 import numpy as np
 import librosa
 from obswebsocket import obsws, requests, exceptions
-
+import time
 
 # Connect to OBS WebSocket
 host = "192.168.1.88"
 port = 4455  # Change if necessary
-password = "<your OBS web socket password here>"  # Set in OBS WebSocket settings
+password = "<put your OBS websocket password here>"  # Set in OBS WebSocket settings
 
 # Audio stream configuration
 CHUNK = 4096  # Number of audio frames per buffer
@@ -18,6 +18,7 @@ RATE = 44100  # Standard sample rate
 # GIF configuration
 baseGIFBPM = 200
 obsSourceName = "MyGIFSource"
+timeBetweenGIFSpeedRefresh = 10.0
 
 ws = obsws(host, port, password)
 print('Created WS')
@@ -35,8 +36,6 @@ print('Current scene is', current_scene)
 # Initialize PyAudio
 p = pyaudio.PyAudio()
 
-# Open stream to capture system audio output (adjust input_device_index as needed)
-stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK, )
 
 def get_bpm(audio_buffer, sr=RATE):
     """Detect BPM from an audio buffer."""
@@ -51,6 +50,8 @@ current_bpm = baseGIFBPM # Really doesn't matter what number you put here
 
 try:
     while True:
+        # Open stream to capture system audio output (adjust input_device_index as needed)
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
         audio_data = stream.read(CHUNK, exception_on_overflow=False)  # Capture audio chunk
         bpm = get_bpm(audio_data)
         if abs(current_bpm - bpm) > 5:
@@ -59,6 +60,7 @@ try:
             result = ws.call(requests.SetInputSettings(inputName=obsSourceName, inputSettings={'speed_percent': int(bpm/baseGIFBPM*100.0+.5)}))
             current_bpm = bpm
             print(result)
+            time.sleep(timeBetweenGIFSpeedRefresh)
 
 except KeyboardInterrupt:
     print("\nStopping...")
